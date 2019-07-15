@@ -23,6 +23,46 @@ func TestParseProcNetARPLine(t *testing.T) {
 	assert.Equal(t, "br0", info.Device)
 }
 
+func TestParseProcNetARPLineMalformed(t *testing.T) {
+	v := "# 192.168.1.43 0x1 0x2 d0:d2:b0:9c:f7:7d * br0"
+
+	info, err := parseARPCacheLine(v)
+	assert.Error(t, err)
+	assert.Nil(t, info)
+}
+
+func TestParseProcNetARPLineInvalidIP(t *testing.T) {
+	v := "666.168.1.43 0x1 0x2 d0:d2:b0:9c:f7:7d * br0"
+
+	info, err := parseARPCacheLine(v)
+	assert.Error(t, err)
+	assert.Nil(t, info)
+}
+
+func TestParseProcNetARPLineInvalidHWType(t *testing.T) {
+	v := "192.168.1.43 Z 0x2 d0:d2:b0:9c:f7:7d * br0"
+
+	info, err := parseARPCacheLine(v)
+	assert.Error(t, err)
+	assert.Nil(t, info)
+}
+
+func TestParseProcNetARPLineInvalidFlags(t *testing.T) {
+	v := "192.168.1.43 0x1 X d0:d2:b0:9c:f7:7d * br0"
+
+	info, err := parseARPCacheLine(v)
+	assert.Error(t, err)
+	assert.Nil(t, info)
+}
+
+func TestParseProcNetARPLineInvalidMAC(t *testing.T) {
+	v := "192.168.1.43 0x1 0x2 xx:xx:b0:9c:f7:7d * br0"
+
+	info, err := parseARPCacheLine(v)
+	assert.Error(t, err)
+	assert.Nil(t, info)
+}
+
 func TestParseProcNetARP(t *testing.T) {
 	v := `
 IP address       HW type     Flags       HW address            Mask     Device
