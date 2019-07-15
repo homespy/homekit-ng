@@ -94,6 +94,7 @@ func (m *udpBroker) run(ctx context.Context, sock net.PacketConn, tm *tm.Telemet
 		values, err := decoder.Decode(string(buf[:nRead]))
 		if err != nil {
 			m.log.Warnf("failed to parse datagram: %v", err)
+			continue
 		}
 
 		tm.PutMulti(values)
