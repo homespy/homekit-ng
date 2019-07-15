@@ -12,11 +12,14 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	scanner := device.NewScanner("en0")
+	scanner := device.NewScanner("br0")
 	scanInfo, err := scanner.Scan(ctx)
+	fmt.Printf("%v %v\n", scanInfo, err)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("%v\n", scanInfo)
+	for id, record := range scanInfo {
+		fmt.Printf("%d %v\n", id, record)
+	}
 }

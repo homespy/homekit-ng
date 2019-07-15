@@ -2,56 +2,9 @@ package device
 
 import (
 	"context"
-	"fmt"
-	"net"
-	"os/exec"
-	"strings"
+
+	"homekit-ng/homekit/device/scan"
 )
-
-type ScanInfo struct {
-	MAC string
-	IP  net.IP
-}
-
-func parseScanInfoFromString(v string) (*ScanInfo, error) {
-	parts := strings.Split(v, " ")
-	if len(parts) < 7 {
-		return nil, fmt.Errorf("malformed ARP output")
-	}
-
-	mac := parts[3]
-
-	ipString := strings.Trim(parts[1], "()")
-	ip := net.ParseIP(ipString)
-	if ip == nil {
-		return nil, fmt.Errorf("invalid IP address")
-	}
-
-	m := &ScanInfo{
-		MAC: mac,
-		IP:  ip,
-	}
-
-	return m, nil
-}
-
-func parseARPIntoScanInfo(out string) ([]*ScanInfo, error) {
-	var scanInfoList []*ScanInfo
-	for _, line := range strings.Split(out, "\n") {
-		if len(line) == 0 {
-			continue
-		}
-
-		scanInfo, err := parseScanInfoFromString(line)
-		if err != nil {
-			return nil, err
-		}
-
-		scanInfoList = append(scanInfoList, scanInfo)
-	}
-
-	return scanInfoList, nil
-}
 
 type Scanner struct {
 	// Interface name to scan.
@@ -70,12 +23,6 @@ func NewScanner(ifName string) *Scanner {
 }
 
 // Scan scans the local network for devices.
-func (m *Scanner) Scan(ctx context.Context) (*ScanInfo, error) {
-	cmd := exec.CommandContext(ctx, "arp", "-an", "-i", m.ifName)
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-
-	return parseScanInfoFromString(string(out))
+func (m *Scanner) Scan(ctx context.Context) ([]*scan.ARPCacheRecord, error) {
+	return scan.ReadARPCache(ctx, m.ifName)
 }
