@@ -30,7 +30,7 @@ func (m *decoder) Decode(v string) ([]*tm.Telemetry, error) {
 		parts := strings.Split(kv, "=")
 
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid telemetry key-value pair")
+			return nil, fmt.Errorf("invalid telemetry key-value pair: %s", kv)
 		}
 
 		topic := parts[0]
