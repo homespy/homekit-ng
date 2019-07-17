@@ -31,22 +31,21 @@ func (m *PingCheck) Run(ctx context.Context) error {
 	p.OnRecv = func(addr *net.IPAddr, rtt time.Duration) {
 		m.OnActivity()
 	}
-	p.OnIdle = func() {
-		//m.Log.Debugf("%s is idle", m.Addr)
-	}
 
 	p.RunLoop()
-	ticker := time.NewTicker(m.Interval)
+	defer p.Stop()
+
+	timer := time.NewTicker(m.Interval)
+	defer timer.Stop()
+
 	for {
 		select {
 		case <-p.Done():
 			if err := p.Err(); err != nil {
-				ticker.Stop()
-				p.Stop()
 				m.Log.Debugf("stopped %T", m)
 				return err
 			}
-		case <-ticker.C:
+		case <-timer.C:
 			continue
 		}
 	}
