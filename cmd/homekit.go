@@ -2,14 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
-	"homekit-ng/homekit/device"
 	"homekit-ng/homekit/device/spy"
 )
 
@@ -32,21 +30,13 @@ func _main() error {
 
 	// todo: from cfg.
 	dev := "en0"
-	mac := "a4:d9:31:d0:38:e9"
-
-	scanner := device.NewScanner(dev)
-	scanInfo, err := scanner.Scan(ctx)
+	mac, err := net.ParseMAC("a4:d9:31:d0:38:e9")
 	if err != nil {
 		return err
 	}
 
-	ip := net.IP{}
-	for id, record := range scanInfo {
-		fmt.Printf("%d %s -> %s\n", id, record.MAC, record.IP.String())
-		if mac == record.MAC {
-			ip = record.IP
-		}
-	}
+	s := spy.NewSpy(dev, log.Sugar())
+	s.Register(mac)
 
 	wg, ctx := errgroup.WithContext(ctx)
 
@@ -70,7 +60,6 @@ func _main() error {
 	//	}
 	//})
 
-	lastSeen := time.Unix(0, 0)
 
 	wg.Go(func() error {
 		timer := time.NewTicker(5 * time.Second)
@@ -81,65 +70,13 @@ func _main() error {
 			case <-ctx.Done():
 				return ctx.Err()
 			case <-timer.C:
-				log.Sugar().Infof("last seen: %s ago", time.Now().Sub(lastSeen))
-
+				log.Sugar().Infof("last seen: %s ago", time.Now().Sub(s.HardwareLastSeen(mac)))
 			}
 		}
 	})
 	wg.Go(func() error {
-		sc := &spy.PingCheck{
-			Addr:     ip.String(),
-			Interval: 1 * time.Second,
-			OnActivity: func() {
-				log.Info("detected PING activity")
-				lastSeen = time.Now()
-			},
-			Log: log.Sugar(),
-		}
-
-		return sc.Run(ctx)
+		return s.Run(ctx)
 	})
-	wg.Go(func() error {
-		sc := &spy.SYNCheck{
-			Addr:     fmt.Sprintf("%s:62078", ip.String()),
-			Interval: 1 * time.Second,
-			OnActivity: func() {
-				log.Info("detected SYN activity")
-				lastSeen = time.Now()
-			},
-			Log: log.Sugar(),
-		}
-
-		return sc.Run(ctx)
-	})
-
-	wg.Go(func() error {
-		MAC, err := net.ParseMAC(mac)
-		if err != nil {
-			return err
-		}
-
-		filter, err := spy.CompileFilter(MAC)
-		if err != nil {
-			return err
-		}
-
-		sc := &spy.PCapCheck{
-			Device: dev,
-			Filter: filter,
-			OnActivity: func() {
-				log.Info("detected PCAP activity")
-				lastSeen = time.Now()
-			},
-			Log: log.Sugar(),
-		}
-
-		return sc.Run(ctx)
-	})
-
-	//if err := hub.Run(ctx); err != nil {
-	//	return err
-	//}
 
 	return wg.Wait()
 }
