@@ -17,12 +17,14 @@ type activityData struct {
 	MAC        net.HardwareAddr
 	IP         net.IP
 	LastSeen   time.Time
-	cancelFunc context.CancelFunc
+	CancelFunc context.CancelFunc
 }
 
 type Spy struct {
 	IdleTimeout time.Duration
 	device      string
+	// The reason we do everything through this channel is to share the main
+	// context provided in "Run" method.
 	txrx        chan interface{}
 	mu          sync.RWMutex
 	activity    map[string]*activityData
@@ -62,6 +64,8 @@ func (m *Spy) Register(mac net.HardwareAddr) {
 }
 
 func (m *Spy) Run(ctx context.Context) error {
+	m.updateHardwareCache(ctx)
+
 	timer := time.NewTicker(10 * time.Second)
 	defer timer.Stop()
 
@@ -90,19 +94,20 @@ func (m *Spy) watchDevice(ctx context.Context, mac net.HardwareAddr) {
 
 	activity, ok := m.activity[mac.String()]
 	if ok {
-		activity.cancelFunc()
+		activity.CancelFunc()
 	}
 
 	m.activity[mac.String()] = &activityData{
 		MAC:        mac,
 		IP:         nil,
 		LastSeen:   time.Time{},
-		cancelFunc: cancelFunc,
+		CancelFunc: cancelFunc,
 	}
 }
 
 func (m *Spy) updateHardwareCache(ctx context.Context) {
 	m.log.Debug("updating ARP cache")
+	defer m.log.Debug("updated ARP cache")
 
 	scanner := device.NewScanner(m.device)
 	scanInfo, err := scanner.Scan(ctx)
@@ -123,12 +128,12 @@ func (m *Spy) updateHardwareCache(ctx context.Context) {
 			}
 
 			m.log.Infof("updated IP address for %s: %s -> %s", activity.MAC, activity.IP, record.IP)
-			activity.cancelFunc()
+			activity.CancelFunc()
 
 			ctx, cancelFunc := context.WithCancel(ctx)
 			activity.IP = record.IP
 			activity.LastSeen = time.Time{}
-			activity.cancelFunc = cancelFunc
+			activity.CancelFunc = cancelFunc
 
 			m.spawnWatcher(ctx, activity.MAC, activity.IP)
 		}

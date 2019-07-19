@@ -2,20 +2,30 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
+	"os"
 	"time"
 
+	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
+	"homekit-ng/homekit"
 	"homekit-ng/homekit/device/spy"
 )
 
-func _main() error {
-	ctx := context.Background()
+const (
+	AppName = "homekit"
+)
 
-	cfg := zap.Config{
-		Level:            zap.NewAtomicLevelAt(zap.DebugLevel),
+var (
+	AppVersion string
+)
+
+func newLogger(cfg homekit.LoggingConfig) (*zap.Logger, error) {
+	loggingConfig := zap.Config{
+		Level:            zap.NewAtomicLevelAt(cfg.Level),
 		Development:      false,
 		Encoding:         "console",
 		EncoderConfig:    zap.NewDevelopmentEncoderConfig(),
@@ -23,13 +33,25 @@ func _main() error {
 		ErrorOutputPaths: []string{"stderr"},
 	}
 
-	log, err := cfg.Build()
+	return loggingConfig.Build()
+}
+
+func _main(path string) error {
+	cfg, err := homekit.LoadConfig(path)
 	if err != nil {
 		return err
 	}
 
+	ctx := context.Background()
+	log, err := newLogger(cfg.Logging)
+	if err != nil {
+		return err
+	}
+
+	log.Info("initialized HomeKit", zap.Any("config", cfg))
+
 	// todo: from cfg.
-	dev := "en0"
+	dev := "br0"
 	mac, err := net.ParseMAC("a4:d9:31:d0:38:e9")
 	if err != nil {
 		return err
@@ -40,27 +62,6 @@ func _main() error {
 
 	wg, ctx := errgroup.WithContext(ctx)
 
-	//hub := homekit.NewHub()
-	//hub.AddBroker(broker.NewUDPBroker(9090, log.Sugar()))
-	//
-	//wg.Go(func() error {
-	//	for {
-	//		log.Debug("reading '/home")
-	//		telemetries := hub.Telemetries().Read("/home")
-	//		for _, v := range telemetries {
-	//			fmt.Printf("%s : %s=%v\n", v.Timestamp, v.Topic, v.Value)
-	//		}
-	//
-	//		select {
-	//		case <-ctx.Done():
-	//			return ctx.Err()
-	//		default:
-	//			time.Sleep(time.Second)
-	//		}
-	//	}
-	//})
-
-
 	wg.Go(func() error {
 		timer := time.NewTicker(5 * time.Second)
 		defer timer.Stop()
@@ -70,7 +71,7 @@ func _main() error {
 			case <-ctx.Done():
 				return ctx.Err()
 			case <-timer.C:
-				log.Sugar().Infof("last seen: %s ago", time.Now().Sub(s.HardwareLastSeen(mac)))
+				log.Sugar().Infof("%s last seen: %s ago", mac, time.Now().Sub(s.HardwareLastSeen(mac)))
 			}
 		}
 	})
@@ -82,7 +83,22 @@ func _main() error {
 }
 
 func main() {
-	if err := _main(); err != nil {
-		panic(err)
+	app := cli.NewApp()
+	app.Name = AppName
+	app.Usage = "HomeKit device presence tracker and telemetry broker"
+	app.Version = AppVersion
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "config, c",
+			Usage: "Load configuration from `FILE`",
+			Value: "/etc/homekit/homekit.json",
+		},
+	}
+	app.Action = func(cmd *cli.Context) error {
+		return _main(cmd.String("config"))
+	}
+	if err := app.Run(os.Args); err != nil {
+		fmt.Printf("ERROR: %v\n", err)
+		os.Exit(1)
 	}
 }

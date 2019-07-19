@@ -1,0 +1,16 @@
+{
+    "logging": {
+        "level": "debug"
+    },
+    "tracking": {
+        "devices": [
+            {
+                "dev": "br0",
+                "mac": "a4:d9:31:d0:38:e9"
+            }
+        ]
+    },
+    "broker": {
+        "port": 9090
+    }
+}
