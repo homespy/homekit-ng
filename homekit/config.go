@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 
 	"go.uber.org/zap/zapcore"
+
+	"homekit-ng/homekit/device"
 )
 
 type Config struct {
@@ -32,12 +34,7 @@ type LoggingConfig struct {
 }
 
 type TrackingConfig struct {
-	Devices []*DeviceConfig
-}
-
-type DeviceConfig struct {
-	Dev string
-	Mac string
+	Devices map[string]*device.TrackingConfig
 }
 
 type BrokerConfig struct {

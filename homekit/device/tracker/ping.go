@@ -1,4 +1,4 @@
-package spy
+package tracker
 
 import (
 	"context"
@@ -10,26 +10,24 @@ import (
 )
 
 type PingCheck struct {
-	// Addr is the target IP endpoint.
-	Addr string
+	// IPAddr is the target IP address.
+	IPAddr string
 	// Interval shows how often the check will be performed.
 	Interval time.Duration
-	// OnActivity is called when a tracker detects any activity on the target.
-	OnActivity func()
 	// Log is a logger.
 	Log *zap.SugaredLogger
 }
 
-func (m *PingCheck) Run(ctx context.Context) error {
+func (m *PingCheck) Run(ctx context.Context, onActivity func()) error {
 	p := fastping.NewPinger()
-	ra, err := net.ResolveIPAddr("ip4:icmp", m.Addr)
+	ra, err := net.ResolveIPAddr("ip4:icmp", m.IPAddr)
 	if err != nil {
 		return err
 	}
 
 	p.AddIPAddr(ra)
 	p.OnRecv = func(addr *net.IPAddr, rtt time.Duration) {
-		m.OnActivity()
+		onActivity()
 	}
 
 	p.RunLoop()

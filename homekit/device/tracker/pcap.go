@@ -1,6 +1,6 @@
 // +build linux
 
-package spy
+package tracker
 
 import (
 	"context"
@@ -26,13 +26,11 @@ type PCapCheck struct {
 	Device string
 	// BPF Filter.
 	Filter []bpf.RawInstruction
-	// OnActivity is called when a tracker detects any activity on the target.
-	OnActivity func()
 	// Logger.
 	Log *zap.SugaredLogger
 }
 
-func (m *PCapCheck) Run(ctx context.Context) error {
+func (m *PCapCheck) Run(ctx context.Context, onActivity func()) error {
 	handle, err := pcapgo.NewEthernetHandle(m.Device)
 	if err != nil {
 		return err
@@ -47,7 +45,7 @@ func (m *PCapCheck) Run(ctx context.Context) error {
 		packetSource := gopacket.NewPacketSource(handle, layers.LayerTypeEthernet)
 		for packet := range packetSource.Packets() {
 			m.Log.Debugf("captured packet: %v", packet)
-			m.OnActivity()
+			onActivity()
 		}
 
 		return fmt.Errorf("unexpected end of packets")

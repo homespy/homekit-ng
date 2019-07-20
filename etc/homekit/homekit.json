@@ -3,12 +3,41 @@
         "level": "debug"
     },
     "tracking": {
-        "devices": [
-            {
-                "dev": "br0",
-                "mac": "a4:d9:31:d0:38:e9"
+        "devices": {
+            "a4:d9:31:d0:38:e9": {
+                "methods": [
+                    {
+                        "type": "pcap",
+                        "args": {
+                            "dev": "br0"
+                        }
+                    }
+                ],
+                "timeout": "5m"
+            },
+            "50:a6:7f:91:65:39": {
+                "methods": [
+                    {
+                        "type": "pcap",
+                        "args": {
+                            "dev": "br0"
+                        }
+                    }
+                ],
+                "timeout": "5m"
+            },
+            "6c:e8:5c:d8:d9:89": {
+                "methods": [
+                    {
+                        "type": "pcap",
+                        "args": {
+                            "dev": "br0"
+                        }
+                    }
+                ],
+                "timeout": "5m"
             }
-        ]
+        }
     },
     "broker": {
         "port": 9090

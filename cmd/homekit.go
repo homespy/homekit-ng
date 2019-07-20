@@ -12,7 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"homekit-ng/homekit"
-	"homekit-ng/homekit/device/spy"
+	"homekit-ng/homekit/device"
 )
 
 const (
@@ -36,7 +36,7 @@ func newLogger(cfg homekit.LoggingConfig) (*zap.Logger, error) {
 	return loggingConfig.Build()
 }
 
-func _main(path string) error {
+func run(path string) error {
 	cfg, err := homekit.LoadConfig(path)
 	if err != nil {
 		return err
@@ -50,18 +50,19 @@ func _main(path string) error {
 
 	log.Info("initialized HomeKit", zap.Any("config", cfg))
 
-	// todo: from cfg.
-	dev := "br0"
-	mac, err := net.ParseMAC("a4:d9:31:d0:38:e9")
-	if err != nil {
-		return err
+	deviceTracker := device.NewActivityTracker(log.Sugar())
+	for mac, config := range cfg.Tracking.Devices {
+		mac, err := net.ParseMAC(mac)
+		if err != nil {
+			return err
+		}
+
+		if err := deviceTracker.Register(mac, config); err != nil {
+			return err
+		}
 	}
 
-	s := spy.NewSpy(dev, log.Sugar())
-	s.Register(mac)
-
 	wg, ctx := errgroup.WithContext(ctx)
-
 	wg.Go(func() error {
 		timer := time.NewTicker(5 * time.Second)
 		defer timer.Stop()
@@ -71,12 +72,14 @@ func _main(path string) error {
 			case <-ctx.Done():
 				return ctx.Err()
 			case <-timer.C:
-				log.Sugar().Infof("%s last seen: %s ago", mac, time.Now().Sub(s.HardwareLastSeen(mac)))
+				for mac := range cfg.Tracking.Devices {
+					log.Sugar().Infof("%s last seen: %s ago", mac, time.Now().Sub(deviceTracker.HardwareLastSeen(mac)))
+				}
 			}
 		}
 	})
 	wg.Go(func() error {
-		return s.Run(ctx)
+		return deviceTracker.Run(ctx)
 	})
 
 	return wg.Wait()
@@ -95,8 +98,9 @@ func main() {
 		},
 	}
 	app.Action = func(cmd *cli.Context) error {
-		return _main(cmd.String("config"))
+		return run(cmd.String("config"))
 	}
+
 	if err := app.Run(os.Args); err != nil {
 		fmt.Printf("ERROR: %v\n", err)
 		os.Exit(1)

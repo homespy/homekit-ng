@@ -1,4 +1,4 @@
-package spy
+package tracker
 
 import (
 	"context"
@@ -15,13 +15,12 @@ type SYNCheck struct {
 	Addr string
 	// Interval shows how often the check will be performed.
 	Interval time.Duration
-	// OnActivity is called when a tracker detects any activity on the target.
-	OnActivity func()
 	// Internal logger, mainly for debugging purposes.
 	Log *zap.SugaredLogger
 }
 
-func (m *SYNCheck) Run(ctx context.Context) error {
+// OnActivity is called when a tracker detects any activity on the target.
+func (m *SYNCheck) Run(ctx context.Context, onActivity func()) error {
 	timer := time.NewTicker(m.Interval)
 	defer timer.Stop()
 
@@ -36,7 +35,7 @@ func (m *SYNCheck) Run(ctx context.Context) error {
 				continue
 			}
 
-			m.OnActivity()
+			onActivity()
 		}
 	}
 }
