@@ -19,6 +19,7 @@ type activityData struct {
 }
 
 type ActivityTracker struct {
+	// todo: move this functionality into a wrapper struct.
 	IdleTimeout time.Duration
 	// The reason we do everything through this channel is to share the main
 	// context provided in "Run" method.

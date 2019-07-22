@@ -2,17 +2,24 @@ package tracker
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
 	"go.uber.org/zap"
+
+	"homekit-ng/homekit/device/neighbor"
 )
 
 // SYNCheck is a check that sends TCP SYN packets to the specified address
 // and waits for an ACK packet.
 type SYNCheck struct {
-	// Addr is the target IP:port endpoint.
-	Addr string
+	// MAC address.
+	MAC net.HardwareAddr
+	// Locator is a MAC to IP address resolver.
+	Locator neighbor.Locator
+	// Port is a target port.
+	Port uint16
 	// Interval shows how often the check will be performed.
 	Interval time.Duration
 	// Internal logger, mainly for debugging purposes.
@@ -41,8 +48,13 @@ func (m *SYNCheck) Run(ctx context.Context, onActivity func()) error {
 }
 
 func (m *SYNCheck) execute(ctx context.Context) error {
+	addrs, err := m.Locator.Locate(m.MAC)
+	if err != nil {
+		return err
+	}
+
 	dialer := net.Dialer{}
-	conn, err := dialer.DialContext(ctx, "tcp", m.Addr)
+	conn, err := dialer.DialContext(ctx, "tcp", fmt.Sprintf("%s:%d", addrs[0].IP.String(), m.Port))
 	if err != nil {
 		return err
 	}

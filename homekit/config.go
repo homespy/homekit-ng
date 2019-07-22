@@ -1,10 +1,10 @@
 package homekit
 
 import (
-	"encoding/json"
 	"io/ioutil"
 
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/yaml.v2"
 
 	"homekit-ng/homekit/device"
 )
@@ -22,7 +22,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	cfg := &Config{}
-	if err := json.Unmarshal(data, cfg); err != nil {
+	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, err
 	}
 

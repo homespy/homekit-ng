@@ -1,4 +1,4 @@
-package scan
+package neighbor
 
 import (
 	"fmt"
@@ -6,11 +6,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-type ARPCacheRecord struct {
-	MAC string
-	IP  net.IP
-}
 
 type ARPCacheLine struct {
 	IP     net.IP

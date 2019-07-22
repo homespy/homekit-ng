@@ -48,7 +48,7 @@ func run(path string) error {
 		return err
 	}
 
-	log.Info("initialized HomeKit", zap.Any("config", cfg))
+	log.Info("initialized HomeKit")
 
 	deviceTracker := device.NewActivityTracker(log.Sugar())
 	for mac, config := range cfg.Tracking.Devices {
