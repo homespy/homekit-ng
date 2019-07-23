@@ -23,3 +23,9 @@ tracking:
       timeout: 5m
 broker:
   port: 9090
+
+influx:
+  addr: https://influxdb.endpoint/
+  username: username
+  password: password
+  interval: 10s

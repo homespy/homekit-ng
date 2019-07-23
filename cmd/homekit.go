@@ -14,6 +14,7 @@ import (
 	"homekit-ng/homekit"
 	"homekit-ng/homekit/broker"
 	"homekit-ng/homekit/device"
+	"homekit-ng/homekit/publish"
 )
 
 const (
@@ -84,7 +85,7 @@ func run(path string) error {
 					if deviceTracker.IsUp(mac) {
 						isUp = 1.0
 					}
-					memoryBroker.Add(fmt.Sprintf("/home/%s", mac), isUp)
+					memoryBroker.Add(fmt.Sprintf("/home/activity/%s", mac), isUp)
 				}
 			}
 		}
@@ -93,20 +94,8 @@ func run(path string) error {
 		return deviceTracker.Run(ctx)
 	})
 	wg.Go(func() error {
-		timer := time.NewTicker(10 * time.Second)
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-			return ctx.Err()
-			case <-timer.C:
-				for id, telemetry := range hub.Telemetries().Read("/") {
-					log.Sugar().Infof("[%d] %s: %.2f", id, telemetry.Topic, telemetry.Value)
-				}
-			}
-		}
-
+		writer := publish.NewInfluxDBMetricsWriter(&cfg.Influx, hub.Telemetries(), log.Sugar())
+		return writer.Run(ctx)
 	})
 	wg.Go(func() error {
 		return hub.Run(ctx)

@@ -7,12 +7,14 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"homekit-ng/homekit/device"
+	"homekit-ng/homekit/publish"
 )
 
 type Config struct {
 	Logging  LoggingConfig
 	Tracking TrackingConfig
 	Broker   BrokerConfig
+	Influx   publish.InfluxConfig
 }
 
 func LoadConfig(path string) (*Config, error) {

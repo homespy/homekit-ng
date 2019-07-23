@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/google/gopacket v1.1.17
+	github.com/influxdata/influxdb1-client v0.0.0-20190402204710-8ff2fc3824fc
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/stretchr/testify v1.3.0
 	github.com/tatsushid/go-fastping v0.0.0-20160109021039-d7bb493dee3e
