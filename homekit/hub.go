@@ -3,6 +3,7 @@ package homekit
 import (
 	"context"
 
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
 	"homekit-ng/homekit/tm"
@@ -15,11 +16,13 @@ type Broker interface {
 type Hub struct {
 	tm      *tm.TelemetryStorage
 	brokers []Broker
+	log     *zap.SugaredLogger
 }
 
-func NewHub() *Hub {
+func NewHub(log *zap.SugaredLogger) *Hub {
 	return &Hub{
-		tm: tm.NewTelemetryStorage(),
+		tm:  tm.NewTelemetryStorage(),
+		log: log,
 	}
 }
 
@@ -35,7 +38,12 @@ func (m *Hub) Run(ctx context.Context) error {
 	wg, ctx := errgroup.WithContext(ctx)
 
 	for _, broker := range m.brokers {
+		broker := broker
+
 		wg.Go(func() error {
+			m.log.Infof("running %T", broker)
+			defer m.log.Infof("stopped %T", broker)
+
 			return broker.Run(ctx, m.tm)
 		})
 	}

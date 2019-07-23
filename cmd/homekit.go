@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"homekit-ng/homekit"
+	"homekit-ng/homekit/broker"
 	"homekit-ng/homekit/device"
 )
 
@@ -62,6 +63,12 @@ func run(path string) error {
 		}
 	}
 
+	memoryBroker := broker.NewMemoryBroker()
+
+	hub := homekit.NewHub(log.Sugar())
+	hub.AddBroker(memoryBroker)
+	hub.AddBroker(broker.NewUDPBroker(cfg.Broker.Port, log.Sugar()))
+
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
 		timer := time.NewTicker(5 * time.Second)
@@ -73,13 +80,36 @@ func run(path string) error {
 				return ctx.Err()
 			case <-timer.C:
 				for mac := range cfg.Tracking.Devices {
-					log.Sugar().Infof("%s last seen: %s ago", mac, time.Now().Sub(deviceTracker.HardwareLastSeen(mac)))
+					isUp := 0.0
+					if deviceTracker.IsUp(mac) {
+						isUp = 1.0
+					}
+					memoryBroker.Add(fmt.Sprintf("/home/%s", mac), isUp)
 				}
 			}
 		}
 	})
 	wg.Go(func() error {
 		return deviceTracker.Run(ctx)
+	})
+	wg.Go(func() error {
+		timer := time.NewTicker(10 * time.Second)
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+			return ctx.Err()
+			case <-timer.C:
+				for id, telemetry := range hub.Telemetries().Read("/") {
+					log.Sugar().Infof("[%d] %s: %.2f", id, telemetry.Topic, telemetry.Value)
+				}
+			}
+		}
+
+	})
+	wg.Go(func() error {
+		return hub.Run(ctx)
 	})
 
 	return wg.Wait()

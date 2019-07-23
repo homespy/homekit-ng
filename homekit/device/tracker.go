@@ -132,7 +132,7 @@ func (m *ActivityTracker) watch(ctx context.Context, mac net.HardwareAddr, track
 
 		wg.Go(func() error {
 			return tracker.Run(ctx, func() {
-				m.log.Infof("detected %T activity", tracker)
+				m.log.Debugf("detected %T activity", tracker)
 				m.updateLastSeen(mac)
 			})
 		})
